@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เครื่องมือทำภาพปกข่าว - ข่าวเชียงราย</title>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Kanit', sans-serif; background: #f5f5f7; color: #111; min-height: 100vh; }
+.header { background: #FF2D8A; color: white; padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
+.header h1 { font-size: 22px; font-weight: 700; }
+.header .tag { background: #1A2A6C; padding: 4px 12px; border-radius: 20px; font-size: 14px; }
+.container { display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; max-width: 1400px; margin: 0 auto; }
+.preview-wrap { flex: 1; min-width: 360px; background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+.controls { width: 380px; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); max-height: 90vh; overflow-y: auto; }
+.controls h2 { font-size: 18px; margin-bottom: 16px; color: #FF2D8A; }
+.section { margin-bottom: 18px; }
+.section label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; }
+input[type="text"], input[type="date"], select, textarea { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 15px; }
+textarea { min-height: 70px; resize: vertical; }
+.btn { background: #FF2D8A; color: white; border: none; padding: 12px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: inherit; width: 100%; margin-top: 8px; }
+.btn:hover { background: #e0267a; }
+.btn-secondary { background: #1A2A6C; }
+.btn-secondary:hover { background: #142055; }
+.platform-btns { display: flex; gap: 8px; }
+.platform-btns button { flex: 1; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 8px; cursor: pointer; font-family: inherit; font-weight: 600; }
+.platform-btns button.active { border-color: #FF2D8A; background: #fff0f7; color: #FF2D8A; }
+.dropzone { border: 2px dashed #ccc; border-radius: 10px; padding: 30px 16px; text-align: center; background: #fafafa; cursor: pointer; transition: all 0.2s; }
+.dropzone:hover, .dropzone.dragover { border-color: #FF2D8A; background: #fff0f7; }
+.dropzone p { color: #666; margin-top: 8px; font-size: 14px; }
+#previewCanvas { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); background: #111; }
+.small { font-size: 12px; color: #666; margin-top: 4px; }
+.row { display: flex; gap: 10px; }
+.row > * { flex: 1; }
+@media (max-width: 900px) {
+  .controls { width: 100%; }
+  .preview-wrap { min-width: 100%; }
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>เครื่องมือทำภาพปกข่าว</h1>
+  <span class="tag">ข่าวเชียงราย • ทันเหตุการณ์</span>
+</div>
+
+<div class="container">
+  <div class="preview-wrap">
+    <canvas id="previewCanvas"></canvas>
+    <p class="small" style="margin-top:10px; text-align:center;">ตัวอย่างภาพ • บน iPhone กด “บันทึก / แชร์รูป” แล้วเลือก Save Image</p>
+  </div>
+
+  <div class="controls">
+    <h2>ตั้งค่าภาพปก</h2>
+
+    <div class="section">
+      <label>แพลตฟอร์ม</label>
+      <div class="platform-btns">
+        <button id="btnFB" class="active" onclick="setPlatform('fb')">Facebook (4:5)</button>
+        <button id="btnWeb" onclick="setPlatform('web')">Website (16:9)</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <label>วันที่</label>
+      <input type="date" id="newsDate">
+    </div>
+
+    <div class="section">
+      <label>บรรทัดบน (ไม่บังคับ)</label>
+      <input type="text" id="topLine" placeholder="เช่น ข่าวเด่น / ด่วน" value="">
+    </div>
+
+    <div class="section">
+      <label>พาดหัวหลัก</label>
+      <textarea id="headline" placeholder="พิมพ์พาดหัวข่าวที่นี่">พาดหัวหลักของข่าวเชียงราย</textarea>
+    </div>
+
+    <div class="section">
+      <label>บรรทัดล่าง (ไม่บังคับ)</label>
+      <input type="text" id="bottomLine" placeholder="เช่น รายละเอียดเพิ่มเติม" value="">
+    </div>
+
+    <div class="section">
+      <label>รูปภาพพื้นหลัง</label>
+      <div class="dropzone" id="dropzone">
+        <strong>คลิกหรือลากรูปมาวางที่นี่</strong>
+        <p>รองรับ JPG, PNG • รูปแรกจะเป็นพื้นหลัง</p>
+        <input type="file" id="fileInput" accept="image/*" style="display:none">
+      </div>
+    </div>
+
+    <div class="section">
+      <label>ขนาดตัวอักษรพาดหัว</label>
+      <input type="range" id="fontSize" min="28" max="90" value="56" oninput="render()">
+      <div class="small">ปรับให้พอดีกับความยาวข้อความ</div>
+    </div>
+
+    <div class="section">
+      <label>ความเข้ม Gradient ดำด้านล่าง</label>
+      <input type="range" id="gradient" min="0" max="100" value="70" oninput="render()">
+    </div>
+
+    <div class="section">
+      <label>สีโลโก้</label>
+      <div class="row">
+        <button class="btn btn-secondary" style="margin-top:0" onclick="setLogoColor('white')">ขาว</button>
+        <button class="btn" style="margin-top:0; background:#1A2A6C" onclick="setLogoColor('color')">สี</button>
+      </div>
+    </div>
+
+    <button class="btn" onclick="downloadImage()">บันทึก / แชร์รูป</button>
+    <button class="btn btn-secondary" onclick="resetAll()">รีเซ็ตทั้งหมด</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('previewCanvas');
+const ctx = canvas.getContext('2d');
+let platform = 'fb';
+let bgImage = null;
+let logoColor = 'white'; // white or color
+let currentFontSize = 48;
+
+const sizes = {
+  fb: { w: 1080, h: 1350 },
+  web: { w: 1920, h: 1080 }
+};
+
+function setPlatform(p) {
+  platform = p;
+  document.getElementById('btnFB').classList.toggle('active', p === 'fb');
+  document.getElementById('btnWeb').classList.toggle('active', p === 'web');
+  render();
+}
+
+function setLogoColor(c) {
+  logoColor = c;
+  render();
+}
+
+function formatThaiDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const buddhistYear = d.getFullYear() + 543;
+  return `${d.getDate()} ${months[d.getMonth()]} ${buddhistYear}`;
+}
+
+function drawLogo(x, y, scale = 1) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+
+  if (logoColor === 'color') {
+    // Simplified color logo style
+    ctx.fillStyle = '#FF2D8A';
+    ctx.beginPath();
+    ctx.roundRect(0, 0, 220, 90, 12);
+    ctx.fill();
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 28px Kanit';
+    ctx.textAlign = 'center';
+    ctx.fillText('ข่าวเชียงราย', 110, 38);
+    ctx.fillStyle = '#1A2A6C';
+    ctx.beginPath();
+    ctx.roundRect(20, 52, 180, 30, 8);
+    ctx.fill();
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 16px Kanit';
+    ctx.fillText('ทันเหตุการณ์', 110, 73);
+  } else {
+    // White logo on dark/transparent
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 32px Kanit';
+    ctx.textAlign = 'right';
+    ctx.fillText('ข่าวเชียงราย', 0, 0);
+    ctx.font = '600 16px Kanit';
+    ctx.fillStyle = '#FF2D8A';
+    ctx.fillText('ทันเหตุการณ์', 0, 28);
+  }
+  ctx.restore();
+}
+
+function render() {
+  const size = sizes[platform];
+  canvas.width = size.w;
+  canvas.height = size.h;
+
+  // Background image or solid
+  if (bgImage) {
+    const scale = Math.max(size.w / bgImage.width, size.h / bgImage.height);
+    const iw = bgImage.width * scale;
+    const ih = bgImage.height * scale;
+    const ix = (size.w - iw) / 2;
+    const iy = (size.h - ih) / 2;
+    ctx.drawImage(bgImage, ix, iy, iw, ih);
+  } else {
+    const grad = ctx.createLinearGradient(0, 0, 0, size.h);
+    grad.addColorStop(0, '#2a1a3a');
+    grad.addColorStop(1, '#111');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size.w, size.h);
+  }
+
+  // Gradient overlay bottom
+  const gStrength = document.getElementById('gradient').value / 100;
+  const gH = size.h * 0.45;
+  const grad = ctx.createLinearGradient(0, size.h - gH, 0, size.h);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, `rgba(0,0,0,${0.75 * gStrength + 0.15})`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, size.h - gH, size.w, gH);
+
+  // Date top left - size = half of logo
+  const dateStr = formatThaiDate(document.getElementById('newsDate').value);
+  const fontSize = parseInt(document.getElementById('fontSize').value);
+  const logoSize = Math.round(fontSize * 0.85); // logo roughly matches headline height
+  const dateSize = Math.round(logoSize * 0.5);
+
+  ctx.fillStyle = 'white';
+  ctx.font = `600 ${dateSize}px Kanit`;
+  ctx.textAlign = 'left';
+  ctx.fillText(dateStr, 40, 40 + dateSize);
+
+  // Logo top right - sized to match main headline
+  if (logoColor === 'white') {
+    ctx.fillStyle = 'white';
+    ctx.font = `bold ${logoSize}px Kanit`;
+    ctx.textAlign = 'right';
+    ctx.fillText('ข่าวเชียงราย', size.w - 40, 40 + logoSize * 0.7);
+    ctx.font = `600 ${Math.round(logoSize * 0.45)}px Kanit`;
+    ctx.fillStyle = '#FF2D8A';
+    ctx.fillText('ทันเหตุการณ์', size.w - 40, 40 + logoSize * 0.7 + logoSize * 0.4);
+  } else {
+    const scale = logoSize / 36;
+    drawLogo(size.w - 260 * scale, 20, scale);
+  }
+
+  // Texts
+  const topLine = document.getElementById('topLine').value.trim();
+  const headline = document.getElementById('headline').value.trim() || 'พาดหัวหลัก';
+  const bottomLine = document.getElementById('bottomLine').value.trim();
+
+  // Adjust main headline much larger (+50%), top/bottom = 40% of adjusted headline
+  const adjustedFontSize = Math.round(fontSize * 1.5);
+  const subFontSize = Math.round(adjustedFontSize * 0.4);
+
+  ctx.textAlign = 'center';
+  let y = size.h - 200;
+
+  if (topLine) {
+    ctx.fillStyle = 'white';
+    ctx.font = `700 ${subFontSize}px Kanit`;
+    ctx.fillText(topLine, size.w / 2, y);
+    y += subFontSize + 12;
+  }
+
+  ctx.fillStyle = '#FFD700'; // yellow like reference
+  ctx.font = `800 ${adjustedFontSize}px Kanit`;
+  const maxWidth = size.w - 100;
+  const headlineLines = wrapText(ctx, headline, size.w / 2, y, maxWidth, adjustedFontSize * 1.1);
+  y += headlineLines * adjustedFontSize * 1.1 + 16;
+
+  if (bottomLine) {
+    ctx.font = `600 ${subFontSize}px Kanit`;
+    ctx.fillStyle = 'white';
+    wrapText(ctx, bottomLine, size.w / 2, y, maxWidth, subFontSize * 1.2);
+  }
+
+  // Bottom accent bar
+  ctx.fillStyle = '#1A2A6C';
+  ctx.fillRect(0, size.h - 12, size.w, 12);
+}
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '';
+  let lines = [];
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + ' ';
+    const metrics = ctx.measureText(testLine);
+    if (metrics.width > maxWidth && n > 0) {
+      lines.push(line);
+      line = words[n] + ' ';
+    } else {
+      line = testLine;
+    }
+  }
+  lines.push(line);
+
+  lines.forEach((l, i) => {
+    ctx.fillText(l.trim(), x, y + i * lineHeight);
+  });
+  return lines.length;
+}
+
+async function downloadImage() {
+  const date = document.getElementById('newsDate').value || 'news';
+  const filename = `chiangrai-news-${platform}-${date}.jpg`;
+
+  // Prefer Web Share API for iOS / mobile (Save Image to Photos)
+  if (navigator.share && navigator.canShare) {
+    try {
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+      const file = new File([blob], filename, { type: 'image/jpeg' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'ภาพปกข่าวเชียงราย',
+          text: 'บันทึกรูปภาพปกข่าว'
+        });
+        return;
+      }
+    } catch (err) {
+      // User cancelled or share failed, fall through to download
+      console.log('Share cancelled or failed', err);
+    }
+  }
+
+  // Fallback for desktop / Android Chrome
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = canvas.toDataURL('image/jpeg', 0.92);
+  link.click();
+}
+
+function resetAll() {
+  document.getElementById('topLine').value = '';
+  document.getElementById('headline').value = 'พาดหัวหลักของข่าวเชียงราย';
+  document.getElementById('bottomLine').value = '';
+  document.getElementById('fontSize').value = 56;
+  document.getElementById('gradient').value = 70;
+  bgImage = null;
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('newsDate').value = today;
+  render();
+}
+
+// File handling
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+
+dropzone.onclick = () => fileInput.click();
+dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add('dragover'); };
+dropzone.ondragleave = () => dropzone.classList.remove('dragover');
+dropzone.ondrop = (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+};
+fileInput.onchange = (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); };
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => { bgImage = img; render(); };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Init
+const today = new Date().toISOString().split('T')[0];
+document.getElementById('newsDate').value = today;
+document.getElementById('newsDate').onchange = render;
+document.getElementById('topLine').oninput = render;
+document.getElementById('headline').oninput = render;
+document.getElementById('bottomLine').oninput = render;
+setPlatform('fb');
+</script>
+</body>
+</html>
