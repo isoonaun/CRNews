@@ -83,6 +83,12 @@ textarea { min-height: 70px; resize: vertical; }
     </div>
 
     <div class="section">
+      <label>ขนาดตัวอักษรบรรทัดล่าง</label>
+      <input type="range" id="bottomFontSize" min="16" max="48" value="24" oninput="render()">
+      <div class="small">ปรับขนาดบรรทัดล่างแยกต่างหาก</div>
+    </div>
+
+    <div class="section">
       <label>รูปภาพพื้นหลัง</label>
       <div class="dropzone" id="dropzone">
         <strong>คลิกหรือลากรูปมาวางที่นี่</strong>
@@ -243,9 +249,10 @@ function render() {
   const headline = document.getElementById('headline').value.trim() || 'พาดหัวหลัก';
   const bottomLine = document.getElementById('bottomLine').value.trim();
 
-  // Adjust main headline much larger (+50%), top/bottom = 40% of adjusted headline
+  // Adjust main headline much larger (+50%), top = 40% of adjusted headline
   const adjustedFontSize = Math.round(fontSize * 1.5);
   const subFontSize = Math.round(adjustedFontSize * 0.4);
+  const bottomFontSize = parseInt(document.getElementById('bottomFontSize').value) || subFontSize;
 
   ctx.textAlign = 'center';
   let y = size.h - 200;
@@ -264,9 +271,9 @@ function render() {
   y += headlineLines * adjustedFontSize * 1.1 + 16;
 
   if (bottomLine) {
-    ctx.font = `600 ${subFontSize}px Kanit`;
+    ctx.font = `600 ${bottomFontSize}px Kanit`;
     ctx.fillStyle = 'white';
-    wrapText(ctx, bottomLine, size.w / 2, y, maxWidth, subFontSize * 1.2);
+    wrapText(ctx, bottomLine, size.w / 2, y, maxWidth, bottomFontSize * 1.2);
   }
 
   // Bottom accent bar
@@ -331,6 +338,7 @@ function resetAll() {
   document.getElementById('headline').value = 'พาดหัวหลักของข่าวเชียงราย';
   document.getElementById('bottomLine').value = '';
   document.getElementById('fontSize').value = 56;
+  document.getElementById('bottomFontSize').value = 24;
   document.getElementById('gradient').value = 70;
   bgImage = null;
   const today = new Date().toISOString().split('T')[0];
